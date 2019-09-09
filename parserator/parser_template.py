@@ -17,9 +17,6 @@ from collections import OrderedDict
 #  _____________________
 # |1. CONFIGURE LABELS! |
 # |_____________________| 
-#     (\__/) || 
-#     (•ㅅ•) || 
-#     / 　 づ
 LABELS = [] # The labels should be a list of strings
 
 #***************** OPTIONAL CONFIG ***************************************************
@@ -66,9 +63,6 @@ def tag(raw_string) :
 #  _____________________
 # |2. CONFIGURE TOKENS! |
 # |_____________________| 
-#     (\__/) || 
-#     (•ㅅ•) || 
-#     / 　 づ
 def tokenize(raw_string):
     # this determines how any given string is split into its tokens
     # handle any punctuation you want to split on, as well as any punctuation to capture
@@ -90,9 +84,6 @@ def tokenize(raw_string):
 #  _______________________
 # |3. CONFIGURE FEATURES! |
 # |_______________________| 
-#     (\__/) || 
-#     (•ㅅ•) || 
-#     / 　 づ
 def tokens2features(tokens):
     # this should call tokenFeatures to get features for individual tokens,
     # as well as define any features that are dependent upon tokens before/after
