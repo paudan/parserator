@@ -5,23 +5,17 @@ from __future__ import print_function
 from __future__ import absolute_import
 from builtins import zip
 from builtins import str
-from builtins import range
-from lxml import etree
 import sys
 import os.path
 from . import data_prep_utils
-import re
-import csv
-from argparse import ArgumentParser
 from collections import OrderedDict
-import io
 
 if sys.version < '3' :
     from backports import csv
 else :
     import csv
 
-def consoleLabel(raw_strings, labels, module): 
+def consoleLabel(raw_strings, labels, module, type):
     print('\nStart console labeling!\n')
     valid_input_tags = OrderedDict([(str(i), label) for i, label in enumerate(labels)])
     printHelp(valid_input_tags)
@@ -41,7 +35,7 @@ def consoleLabel(raw_strings, labels, module):
             print('-'*50)
             print('STRING: %s' %raw_sequence)
             
-            preds = module.parse(raw_sequence)
+            preds = module.parse(raw_sequence, type=type)
 
             user_input = None 
             while user_input not in valid_responses :
@@ -57,8 +51,7 @@ def consoleLabel(raw_strings, labels, module):
                     strings_left_to_tag.remove(raw_sequence)
 
                 elif user_input =='n':
-                    corrected_string = manualTagging(preds, 
-                                                valid_input_tags)
+                    corrected_string = manualTagging(preds, valid_input_tags)
                     tagged_strings.add(tuple(corrected_string))
                     strings_left_to_tag.remove(raw_sequence)
 
@@ -179,7 +172,7 @@ def printHelp(valid_input_tags):
     print("type 'oops' if you make a labeling error\n")
     print('*'*50, '\n')
 
-def label(module, infile, outfile, xml):
+def label(module, infile, outfile, xml, type=None):
 
     training_data = data_prep_utils.TrainingData(xml, module)
 
@@ -187,9 +180,12 @@ def label(module, infile, outfile, xml):
     strings = set(row[0] for row in reader)
 
     labels = module.LABELS
-
-    if module.TAGGER:
-        labeled_list, raw_strings_left = consoleLabel(strings, labels, module) 
+    if type is None:
+        tagger = module.TAGGER
+    else:
+        tagger = module.TAGGERS[type] or module.TAGGER
+    if tagger:
+        labeled_list, raw_strings_left = consoleLabel(strings, labels, module, type)
     else:
         labeled_list, raw_strings_left = naiveConsoleLabel(strings, labels, module)
 

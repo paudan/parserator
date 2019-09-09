@@ -37,6 +37,9 @@ def dispatch():
     sub_label.add_argument(dest='module',
                            help='parser module name',
                            type=python_module)
+    sub_label.add_argument('--model',
+                           help='model type, as defined in module',
+                           required=False)
     sub_label.set_defaults(func=label)
 
     # Arguments for autolabel command
@@ -50,6 +53,9 @@ def dispatch():
     sub_label.add_argument(dest='module',
                            help='parser module name',
                            type=python_module)
+    sub_label.add_argument('--model',
+                           help='model type, as defined in module',
+                           required=False)
     sub_label.set_defaults(func=autolabel)
 
     # Arguments for train command
@@ -83,10 +89,10 @@ def dispatch():
 
 
 def autolabel(args) :
-    auto_labeling.label(args.module, args.infile, args.outfile, args.xml)
+    auto_labeling.label(args.module, args.infile, args.outfile, args.xml, args.model)
     
 def label(args) :
-    manual_labeling.label(args.module, args.infile, args.outfile, args.xml)
+    manual_labeling.label(args.module, args.infile, args.outfile, args.xml, args.model)
 
 def train(args) :
     training_data = args.traindata
@@ -212,16 +218,12 @@ def training_data(arg):
             training_data.update(data_prep_utils.TrainingData(file_xml))
 
     if not training_data:
-        raise argparse.ArgumentTypeError("No training data found. Perhaps double check "
-                                         "your training data filepaths?")
+        raise argparse.ArgumentTypeError("No training data found. Perhaps double check your training data filepaths?")
 
-    msg = """
-          training model on {num} training examples from {file_list} file(s)"""
-
-    print(textwrap.dedent(msg.format(num=len(training_data),
-                                     file_list=xml_files)))
-
+    msg = """training model on {num} training examples from {file_list} file(s)"""
+    print(textwrap.dedent(msg.format(num=len(training_data), file_list=xml_files)))
     return training_data
+
 
 class ModelFile(argparse.Action):
     def __call__(self, parser, namespace, model_file, option_string):
