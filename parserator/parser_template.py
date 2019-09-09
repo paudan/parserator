@@ -23,16 +23,23 @@ LABELS = [] # The labels should be a list of strings
 PARENT_LABEL  = 'TokenSequence'               # the XML tag for each labeled string
 GROUP_LABEL   = 'Collection'                  # the XML tag for a group of strings
 NULL_LABEL    = 'Null'                        # the null XML tag
-MODEL_FILE    = 'learned_settings.crfsuite'   # filename for the crfsuite settings file
 #************************************************************************************
 
+MODEL_FILES = {'generic' : 'generic_learned_settings.crfsuite' }
+# default model file to use if user doesn't specify a model file
+MODEL_FILE = MODEL_FILES['generic']
 
-try :
-    TAGGER = pycrfsuite.Tagger()
-    TAGGER.open(os.path.split(os.path.abspath(__file__))[0]+'/'+MODEL_FILE)
-except IOError :
-    TAGGER = None
-    warnings.warn('You must train the model (parserator train [traindata] [modulename]) to create the %s file before you can use the parse and tag methods' %MODEL_FILE)
+def _loadTagger(model_type) :
+    tagger = pycrfsuite.Tagger()
+    try:
+        tagger.open(os.path.split(os.path.abspath(__file__))[0] + '/' + MODEL_FILES[model_type])
+    except IOError:
+        tagger = None
+        warnings.warn('You must train the model (parserator train [traindata] [modulename]) to create the %s file before you can use the parse and tag methods' % MODEL_FILES[model_type])
+    return tagger
+
+TAGGERS = {model_type : _loadTagger(model_type) for model_type in MODEL_FILES}
+TAGGER = TAGGERS['generic']                 # Default tagger
 
 def parse(raw_string):
     if not TAGGER:
