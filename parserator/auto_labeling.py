@@ -6,7 +6,7 @@ else:
     import csv
 
 def autoLabel(raw_strings, module):
-    return set([tuple(module.parse(raw_sequence)) for i, raw_sequence in enumerate(raw_strings, 1)])
+    return set([tuple(module.parse(raw_sequence)) for i, raw_sequence in enumerate(set(raw_strings), 1)])
 
 def label(module, infile, outfile, xml):
     training_data = data_prep_utils.TrainingData(xml, module)
