@@ -8,8 +8,6 @@ from builtins import open
 
 import argparse
 import os
-import shutil
-import fileinput
 import sys
 import glob
 import textwrap
@@ -18,6 +16,7 @@ from lxml import etree
 import chardet
 
 from . import manual_labeling
+from . import auto_labeling
 from . import training
 from . import parser_template
 from . import data_prep_utils
@@ -39,6 +38,19 @@ def dispatch():
                            help='parser module name',
                            type=python_module)
     sub_label.set_defaults(func=label)
+
+    # Arguments for autolabel command
+    sub_label = parser_subparsers.add_parser('autolabel')
+    sub_label.add_argument(dest='infile',
+                           help='input csv filepath for the label task',
+                           type=file_type)
+    sub_label.add_argument(dest='outfile',
+                           help='output xml filepath for the label task',
+                           action=XML)
+    sub_label.add_argument(dest='module',
+                           help='parser module name',
+                           type=python_module)
+    sub_label.set_defaults(func=autolabel)
 
     # Arguments for train command
     sub_train = parser_subparsers.add_parser('train')
@@ -70,6 +82,8 @@ def dispatch():
     args.func(args)
 
 
+def autolabel(args) :
+    auto_labeling.label(args.module, args.infile, args.outfile, args.xml)
     
 def label(args) :
     manual_labeling.label(args.module, args.infile, args.outfile, args.xml)
@@ -158,7 +172,7 @@ def file_type(arg):
         f = open(arg, 'rb')
     except OSError as e:
         message = _("can't open '%s': %s")
-        raise ArgumentTypeError(message % (arg, e))
+        raise argparse.ArgumentTypeError(message % (arg, e))
     else:
         detector = chardet.universaldetector.UniversalDetector()
 
@@ -220,7 +234,7 @@ class ModelFile(argparse.Action):
                 msg = """
                       Invalid --modelfile argument
                       Models available: %s"""
-                raise argparse.ArgumentTypeError(text.dedent(msg) % module.MODEL_FILES)
+                raise argparse.ArgumentTypeError(textwrap.dedent(msg) % module.MODEL_FILES)
         else:
             raise argparse.ArgumentError(self, 'This parser does not allow for multiple models')
 
