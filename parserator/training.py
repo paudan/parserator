@@ -6,13 +6,10 @@ from __future__ import absolute_import
 
 from builtins import zip
 
-import random
 import os
-from imp import reload
 import textwrap
 import re
 import time
-import argparse
 
 import pycrfsuite
 from lxml import etree
@@ -22,13 +19,12 @@ from . import data_prep_utils
 
 def trainModel(training_data, module, model_path,
                params_to_set={'c1':0.1, 'c2':0.01, 'feature.minfreq':0}):
-
     trainer = pycrfsuite.Trainer(verbose=False, params=params_to_set)
-
     for _, components in training_data:
         tokens, labels = list(zip(*components))
-        trainer.append(module.tokens2features(tokens), labels)
-
+        features = module.tokens2features(tokens)
+        if features is not None:
+            trainer.append(features, labels)
     trainer.train(model_path)
 
 
@@ -44,14 +40,9 @@ def renameModelFile(old_model):
 
 
 def train(module, training_data, model_path) :
-
     renameModelFile(model_path)
-
     trainModel(training_data, module, model_path)
-
-    msg = """
-          done training! model file created: {path}""".format(path=model_path)
-
+    msg = """done training! model file created: {path}""".format(path=model_path)
     print(textwrap.dedent(msg))
 
 
