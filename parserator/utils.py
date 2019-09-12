@@ -2,10 +2,20 @@
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
+import sys
+
+if  sys.version_info[0] == 2:
+    reload_func = reload
+elif sys.version_info <= (3, 3):
+    import imp
+    reload_func = imp.reload
+else:
+    import importlib
+    reload_func = importlib.reload
+
 from sklearn.metrics import f1_score
 from sklearn.base import BaseEstimator
-from sklearn.grid_search import GridSearchCV
-from training import get_data_sklearn_format
+from .training import readTrainingData
 import pycrfsuite
 
 
@@ -58,45 +68,35 @@ class SequenceEstimator(BaseEstimator):
     A sklearn-compatible wrapper for a parser trainer
     """
 
-    def __init__(self, c1=1, c2=1, feature_minfreq=0):
+    def __init__(self, parserator_module, model_path=None, c1=1, c2=1, feature_minfreq=0):
         """
         :param c1: L1 regularisation coefficient
         :param c2: L2 regularisation coefficient
         :param feature_minfreq: minimum feature frequency
         :return:
         """
+        self.parserator_module = parserator_module
+        self.model_path = model_path
         self.c1 = c1
         self.c2 = c2
         self.feature_minfreq = feature_minfreq
 
-    def fit(self, X, y, **params, model_path):
+    def fit(self, X, y, **params):
         # sklearn requires parameters to be declared as fields of the estimator,
         # an we can't have a full stop there. Replace with an underscore
         params = {k.replace('_', '.'): v for k, v in self.__dict__.items()}
         trainer = pycrfsuite.Trainer(verbose=False, params=params)
         for raw_text, labels in zip(X, y):
-            tokens = tokenize(raw_text)
-            trainer.append(tokens2features(tokens), labels)
-        trainer.train(model_path)
-        reload(parserator)
+            tokens = self.parserator_module.tokenize(raw_text)
+            trainer.append(self.parserator_module.tokens2features(tokens), labels)
+        trainer.train(self.model_path)
+        reload_func(self.parserator_module)
 
     def predict(self, X):
-        reload(parserator)  # tagger object is defined at the module level, update now
+        reload_func(self.parserator_module)  # tagger object is defined at the module level, update now
         predictions = []
         for sequence in X:
-            predictions.append([foo[1] for foo in parserator.parse(sequence)])
+            predictions.append([foo[1] for foo in self.parserator_module.parse(sequence)])
         return predictions
 
 
-if __name__ == '__main__':
-    # refer to http://www.chokkan.org/software/crfsuite/manual.html
-    # for description of parameters
-    cv = GridSearchCV(SequenceEstimator(), {'c1': [10 ** x for x in range(-2, 2)],
-                                           'c2': [10 ** x for x in range(-2, 4)],
-                                           'feature_minfreq': [0, 3, 5]},
-                      scoring=f1_with_flattening, verbose=5)
-    X, y = get_data_sklearn_format()
-    cv.fit(X, y)
-    print(cv.best_params_)
-    for foo in cv.grid_scores_:
-        print(foo)
