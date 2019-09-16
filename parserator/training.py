@@ -17,9 +17,9 @@ from lxml import etree
 from . import data_prep_utils
 
 
-def trainModel(training_data, module, model_path,
-               params_to_set={'c1':0.1, 'c2':0.01, 'feature.minfreq':0}):
+def trainModel(training_data, module, model_path, params_to_set):
     trainer = pycrfsuite.Trainer(verbose=False, params=params_to_set)
+    print("Trainer parameters:", trainer.get_params())
     for _, components in training_data:
         tokens, labels = list(zip(*components))
         features = module.tokens2features(tokens)
@@ -39,10 +39,10 @@ def renameModelFile(old_model):
         os.rename(old_model, new_name)
 
 
-def train(module, training_data, model_path) :
+def train(module, training_data, model_path, params_to_set={'c1':0.1, 'c2':0.01, 'feature.minfreq':0}) :
     renameModelFile(model_path)
-    trainModel(training_data, module, model_path)
-    msg = """done training! model file created: {path}""".format(path=model_path)
+    trainModel(training_data, module, model_path, params_to_set)
+    msg = """Done training! model file created: {path}""".format(path=model_path)
     print(textwrap.dedent(msg))
 
 

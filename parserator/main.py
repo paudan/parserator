@@ -11,6 +11,7 @@ import os
 import sys
 import glob
 import textwrap
+from configparser import ConfigParser
 
 from lxml import etree
 import chardet
@@ -45,31 +46,36 @@ def dispatch():
     # Arguments for autolabel command
     sub_label = parser_subparsers.add_parser('autolabel')
     sub_label.add_argument(dest='infile',
-                           help='input csv filepath for the label task',
+                           help='Input csv filepath for the label task',
                            type=file_type)
     sub_label.add_argument(dest='outfile',
-                           help='output xml filepath for the label task',
+                           help='Output xml filepath for the label task',
                            action=XML)
     sub_label.add_argument(dest='module',
-                           help='parser module name',
+                           help='Parser module name',
                            type=python_module)
     sub_label.add_argument('--model',
-                           help='model type, as defined in module',
+                           help='Model type, as defined in module',
                            required=False)
     sub_label.set_defaults(func=autolabel)
 
     # Arguments for train command
     sub_train = parser_subparsers.add_parser('train')
     sub_train.add_argument(dest='traindata',
-                           help='comma separated xml filepaths, or "path/to/traindata/*.xml"',
+                           help='Comma separated xml filepaths, or "path/to/traindata/*.xml"',
                            type=training_data)
     sub_train.add_argument(dest='module',
-                           help='parser module name',
+                           help='Parser module name',
                            type=python_module)
     sub_train.add_argument('--modelfile',
                            dest='model_path',
-                           help='location of model file',
+                           help='Location of model file',
                            action=ModelFile,
+                           required=False)
+    sub_train.add_argument('--paramsfile',
+                           dest='params_path',
+                           help='Location of file with parameters for model training',
+                           action=ParamsFile,
                            required=False)
     sub_train.set_defaults(func=train)
 
@@ -98,6 +104,7 @@ def train(args) :
     training_data = args.traindata
     module = args.module
     model_path = args.model_path
+    params_file = args.params_path
 
     if model_path is None:
         model_path = module.__name__ + '/' +module.MODEL_FILE
@@ -111,8 +118,22 @@ def train(args) :
                 print("  - %s" % m)
             print("Since no model was specified, we will train the default model")
 
-    training.train(module, training_data, model_path)
-
+    default_params = {'c1':0.1, 'c2':0.01, 'feature.minfreq':0}
+    params = default_params
+    if params_file is not None:
+        try:
+            config = ConfigParser()
+            config.read(params_file)
+            params = dict(config._sections.get(config.sections()[0]))
+        except Exception as ex:
+            print("Error while reading model parameters file:", ex.__str__())
+            print("Reverting to default training parameters")
+    try:
+        training.train(module, training_data, model_path, params_to_set=params)
+    except Exception as ex:
+        print("Error while setting parameters from config file:", ex.__str__())
+        print("Reverting to default training parameters")
+        training.train(module, training_data, model_path, params_to_set=default_params)
 
 def init(args) :
     name = args.modulename
@@ -231,7 +252,7 @@ class ModelFile(argparse.Action):
 
         if hasattr(module, 'MODEL_FILES'):
             try:
-                model_path = module.__name__ + '/'  +module.MODEL_FILES[model_file]
+                model_path = module.__name__ + '/' +module.MODEL_FILES[model_file]
             except KeyError:
                 msg = """
                       Invalid --modelfile argument
@@ -241,6 +262,17 @@ class ModelFile(argparse.Action):
             raise argparse.ArgumentError(self, 'This parser does not allow for multiple models')
 
         setattr(namespace, self.dest, model_path)
+
+
+class ParamsFile(argparse.Action):
+    def __call__(self, parser, namespace, model_file, option_string):
+
+        try:
+            config = ConfigParser()
+            config.read(model_file)
+        except:
+            raise argparse.ArgumentError(self, 'Parser configuration file is invalid')
+        setattr(namespace, self.dest, model_file)
 
 def python_module(arg):
     module = __import__(arg)
