@@ -18,7 +18,11 @@ from . import data_prep_utils
 
 
 def trainModel(training_data, module, model_path, params_to_set):
-    trainer = pycrfsuite.Trainer(verbose=False, params=params_to_set)
+    algorithm = 'lgbfs'
+    if 'algorithm' in params_to_set:
+        algorithm = params_to_set.get('algorithm')
+        del params_to_set['algorithm']
+    trainer = pycrfsuite.Trainer(verbose=False, algorithm=algorithm, params=params_to_set)
     print("Trainer parameters:", trainer.get_params())
     for _, components in training_data:
         tokens, labels = list(zip(*components))
